@@ -1,0 +1,32 @@
+# Terraform Exam Tips
+An unsorted list of general tips / notes I have for the Terraform exam from when I was practicing.
+# Tips
+- Read the darn questions in full. Don't rush, you have plenty of time.
+- When using something with an explicit TTL, like a token or data, it is important to know that Terraform gathers the data during the `plan` phase
+- To specify a specific module version from a github like, use something with a `?`, like this example:
+    - `git::https://example.com/vpc.git?ref=v1.2.0`
+- `.terraform/providers` is where `terraform init` downloads plugins into
+- If a resource does not exist in the state file when `terraform destroy` is ran, it will not be destroyed
+- The local state for workspaces is `terraform.tfstate.d`
+- Github is not a supported backend type
+- Terraform will deploy resources in parallel, 10 at a time
+- Terraform should be considered immutable
+- An implicit dependance should be considered something like "The EIP cannot be created until the aws_instance is created"
+- At the time of writing, Terraform has no mechanism to redact or protect secrets that are returned via data sources
+- The existence of a provider plugin in a local directory does not inherently create a dependance, but something in the state file does
+- There is no `terraform mask`, and storing state remotely can provide better security
+- Private module registries are free to customers, but team management and governance are not
+- Workspaces between cloud, enterprises, and OSS are completely different
+- Provisioners are a last resort
+- You would identify the specific version of a provider in the `required_providers` block
+- Terraform Cloud for Business allows for Cloud Agents
+- CLI workspaces are alternative state files in the same working directory
+- Retrieving the credentials from a data source, such as Vault, will still store sensitive data in plain text
+- In both OSS and Cloud, workspaces provide similar functionality of using a separate state file for each workspace
+- A provider block may be omitted if its contents would otherwise be empty
+- A new workspace in OSS will use the same terraform backend
+- Expressions are not functions
+- Local backends technically support locking, but it's somewhat a mute point as you cannot share it with your team.
+- K8S supports locking
+- Default variable values will still be found in the state file if no other value was set for the variable
+- You will not find the variable name or description in the state file

@@ -1,0 +1,391 @@
+# learning_terraform
+Initially following along with the FreeCodeCamp course and Terraform: Up and Running book, but supplementing from elsewhere as needed. Uploading to a public GitHub repo in the event that this may help anyone else.
+### General notes
+- `terraform.tvfars` is where you assign values to variables, wheras `variables.tf` is where you declare your variables
+### Introduction
+- Terraform is declarative but does have some imperative-like functionality if needed
+- It's heavily recommended to use Terraform Cloud to simplify workflows
+- `terraform fmt` will format your file, so it's best to do this before checking it in
+- `terraform init` will download and set up the provider defined in your `main.tf` file
+- the lock file will ensure that you use a specific version of a provider
+- `terraform state list` will list all of the resources in a state file
+    - `terraform show` will do the same, but with more info
+### Terraform basics
+- Terraform uses change automation in the form of execution plans and resource graphs to apply and review changesets
+    - Changesets are a collection of commits that represent changes made to a versioning repo. This allows you to see what was changed by who overtime
+- Execution plans are a manual review of what will be added, change, or destroyed before application
+- `terraform graph` will create output that you can use `graphviz` to easily make a graph
+- Terraform is logically split into two main parts
+    - Terraform Core uses RPC to communicate with Terraform plugins
+    - Terraform Plugins expose an implementation for a specific service, or provisioner
+- standard practice is to name the entry point file as main.tf, but terraform will read all files at run time
+- `terraform validate` is kind of like a syntax check
+- The `.tfvars` file acts as an easy way to input variables into a separate file
+- Local values are like variables, but hard coded into the Terraform script
+    - You would access the local like this: `local.host_os`
+- `terraform output` will output the outputs if already in the state file
+- `terraform refresh` will refresh the state file to match what is deployed
+- Terraform modules are kind of like roles or collections from Ansible Galaxy
+    - Technically, when writing a file, you're creating a module
+- You can set up multiple providers, to help create resources in multiple regions for an example, but setting an alias in the providor definition
+    - You then specify the provider in the resource block
+- Terraform cloud is a free service to help manage your state and enable working in a team
+### Terraform Provisioners
+- Terraform allows you to work with two different provisioners, `cloud-init` and `packer`
+- Provisioners should be used as a last resort, because they won't be reflected in the Terraform state file
+- `local-exec` allows you to execute local commands after a resource is provisioned
+- `remote-exec` allows you to execute commands on the remote resource, or script(s)
+- `file` allows you to copy files or directories from your local machine to the remote resource
+- Connection blocks can tell a provisioner resource how to connect to a resource after it is provisioned
+- `null_resource` is a placeholder for resources that have no specific association to provider resources
+    - an example may be a cluster in AWS
+    - Triggers are a map of values that should cause a set of provisioners re-run
+### Terraform Providers
+- A provider is a mapping to a cloud service provider's API
+- Providers can come in three different tiers
+    - official, published by the company that owns the tech
+    - verified, actively maintained and up to date
+    - community, published by a community member with no guarantee of maintenance
+- The Terraform Registry is kind of like Ansible Galaxy
+- You can publish private modules within the Terraform Cloud Private Registry
+    - You need to connect to a version control system and choose a repo
+- `terraform providers` will give you a full list of the providers you are using
+- You can set a provider alias in a parent or child module
+### Terraform Language
+- Terraform files end in either `.tf` or `.tf.json`
+- HCL is the low level language for the Terraform language and JSON syntax
+- You can define things with a JSON syntax, which can be useful when using another program to generate JSON to be used with Terraform
+- The `terraform` block type allows you to change some of the settings of terraform itself
+    - for example:
+        - required version
+        - required providers
+        - experiments
+        - provider meta
+### Variables and Data
+- Variables can have the following defined:
+    - `default` to set a default value
+    - `type`
+    - `description`
+    - `validation`
+    - `sensitive` to limit what is output in the Terraform UI
+- variable definition files are always `.tvfars`
+- You can set an environment variable with the following example:
+    - `export TF_VAR_image_id=ami-abc123`
+- only the `terraform.tfvars` file will be loaded by default, all other files will need to be loaded via CLI
+- You can set up a file to be auto-loaded with a `.auto` in the file name
+    - `my_vars.auto.tfvars`
+- Order of precedence:
+    - `-var` and `-var-file` cli options
+    - `*.auto.tfvars` or `*.auto.tfvars.json`
+    - `terraform.tfvars.json`
+    - `terraform.tfvars`
+    - environment variables
+- Outputs can be set to be sensitive, but can still be found in the state file
+- local variables can be defined in a `locals` block
+- when referencing the local variable, you must use the singular `local`
+- Data sources allow Terraform to use info defined outside of Terraform, another terraform config, or modified by functions.
+### Resource Meta Arguments
+- Meta arguments can be used with any resource type to change the behavior of that resource
+    - depends_on
+    - count
+        - This will let you specify the number of that resource you want. For example, four VMs
+    - for_each
+        - you can refer to each item in a foreach with `each.`
+    - provider
+    - lifecycle
+        - `create_before_destroy` so that a new resource is created before the old one is destroyed
+        - `prevent_destroy`
+        - `ignore_changes`
+    - provisioner
+### Terraform Expressions
+- primitive types are:
+    - string
+    - number
+    - bool
+- no types are:
+    - null, represents absence or omission when you want to use the underlying default
+- complex are:
+    - list (tuple)
+        - Can only be one type
+    - map (object)
+- You have to use double quotes with terraform strings
+- You can use interpolation or directives within a HEREDOC
+- A directive is indicated by a leading `%` whereas interpolation is indicated by `$`
+- In ternary expressions, `?` represents `if` and `:` represents `else`
+    - `? true_val : false_val`
+- With for_each, `{}` will return an object, while `[]` wil return a tuple
+- Splat expressions are kind of like accessing a certain "column" in a powershell, like just file names from `get-childitem`
+### Terraform State
+- The state file will always be named `terraform.tfstate`
+    - This is a json file
+- `terraform state mv` allows you to rename existing resources, move a resource into a module, and move a module into a module
+    - This allows you to avoid destroying a resource
+    - The syntax is pretty similar to a regular linux `mv` command
+- State backups cannot be disabled by design
+### Init and Get
+- `terraform init` will initialize your project by doing the following:
+    - Downloading plugin dependencies like modules and providers
+    - Create a .terraform directory
+    - Create a dependency lock file to enforce expected versions for terraform and plugins
+        - `.terraform.lock.hcl`
+- If you change or modify dependencies, simply rerun `terraform init`
+- `terraform init -upgrade` will upgrade all plugins to the latest version that complies with the config version's constraint
+- `.terraform.tfstate.lock.hcl` is a state lock file
+- `terraform init -get-plugins-false` will skip plugin installation
+- `terraform init -plugin-dir=PATH` will force plugin installation to read plugins from only the target directory
+- `terraform init --lockfile=MODE` will set a lockfile mode
+- `terraform get` is used to download and update modules in the root module
+    - This allows you to pull updated module but avoid initializing your state or pull new provider binaries
+### Fmt, Validate, Console
+- `terraform fmt --diff` will show what exactly this command will change
+- `terraform validate` will not check external resources to see if those are correct
+    - for an example, an invalid VM image
+### Plan and Apply
+- `terraform plan` actually does the following:
+    - Reading the current state of any already-existing remote objects to make sure that the state file is up to date
+    - Comparing the current config to the prior state and noting any differences
+    - Proposing a set of change actions that should, if applied, make the remote objects match the config
+- Speculative plans are when you run `terraform apply`
+- Saved plans are generated when you run `terraform apply -out=file`
+    - This will act like it has auto-approve enabled
+    - These can be good for reviewing purposes
+- To run a saved plan, run `terraform apply FILE`
+### Infrastructure Drift
+- There are three ways to solve drift with Terraform
+    - `-replace` to replace the resource. This used to be called `tainting` the resource
+    - `import` to approve the manual addition and add it to the state file
+    - `-refresh-only` to update the state file to match the config of a resource
+- `terraform import` can only import one resource at a time, and not all resources are supported
+- `-refresh-only` will not modify your remote objects
+    - In other words, this basically considers your state file to be incorrect rather than the remote resources
+### Terraform Troubleshooting
+- There are generally four types of errors that you can encounter
+    - Language errors, like syntax issues
+    - State errors, state does not match whats actually configured
+    - Core errors, bugs with the core library
+    - Provider errors, bugs with the provider or provider API
+- `tf_log` can help you diagnose core errors and provider issues to report the issue on Github
+- You can get these logs by setting the `TF_LOG` environment variable to one of the following:
+    - TRACE
+    - DEBUG
+    - INFO
+    - WARN
+    - ERROR
+    - JSON  
+- Logging can be enabled separately for `TF_LOG_CORE` and `TF_LOG_PROVIDER`
+- You can chose where to log things with `TF_LOG_PATH`
+- If terraform crashes, it will generate a `crash.log` file
+### Terraform Modules 
+- Only verified modules will show up in search terms
+- Terraform modules must be hosted in a public repo on GitHub
+- The repo must be named with the following format:
+    - `terraform-<PROVIDER>-<NAME>`
+- The following files are required in the root directory of the module
+    - `main.tf`
+    - `variables.tf`
+    - `outputs.tf`
+    - `README`
+    - `LICENSE`
+### Team Workflows
+- The terraform workflow is more or less the same as the terraform lifecycle
+    - write, plan, apply
+- Integrating  CI/CD can be helpful for handling sensitive data
+### Terraform Backends
+- There are standard backends or advanced
+- Standard can only store state, and the CLI is needed to perform operations such as `apply`
+    - Third-party backends are standard backends, i.e. AWS S3
+- Enhanced backends can store state and perform operations. 
+    - These are subdivided into local and remote
+    - Remote backends are always the Terraform Cloud / Enterprise
+- You can specify a backend in a `terraform` block
+- `terraform_remote_state` can retrieve the state from another terraform config, but only the output values
+    - You can instead use a data source as an alternative to this, since they work off of live data and not a state file
+- Terraform can lock state to prevent others from corrupting your state.
+    - This will happen automatically on all operations that could write state
+    - You can disable locking, but this is not recommended
+    - You can force an unlock with `force-unlock`
+- When using a local backend, the state is stored in plain-text.
+    - Don't commit this file
+- Remote state results in the state being encrypted at rest
+- `.terraformignore` files are like `.gitignore`files
+    - only the file in the root directory will be read
+### Resources and Complex Types
+- Some resources allow you to specify timeouts in a `timeouts` block
+- Lists are like arrays
+- map is like a single nested json object (`var.plans["planb"]`)
+- set is like a list, but has no secondary index to preserve ordering and all types will be cast to the same as the first element
+- structural types require a scheme as an argument to specify which types are allowed for which elements
+- object is a map with more explicit keying
+- tuples are like arrays
+### Built-In Functions
+- Numeric
+    - `abs` returns the absolute value of a given number
+    - `floor` returns the closest whole number, rounded down
+    - `log` returns the logarithm of a given number in a given base
+    - `ceil` returns the closest whole number, rounded up
+    - `min` takes one or more numbers and returns the smallest number from the set
+    - `max` takes one or more numbers and returns the smallest number from the set
+    - `parseint` parses a given string and returns the resulting number
+    - `pow` calculates an exponent
+    - `signum` determines the sign of a number 
+- String
+    - `indent` adds a given number of spaces to the beginning of all but the first line in a multi-line string
+    - `join` produces a string by concatenating together all elements of a given list of strings with the given delimiter
+    - `lower` 
+    - `regex`
+    - `regexall`
+    - `chomp` removes newline characters at the end of a string
+    - `format` 
+    - `formatlist` produces a list of strings by formatting other values according to a specification string
+    - `replace`
+    - `split`
+    - `strrev` reverses a string
+    - `substr` extracts a substring from a given string
+    - `title` capitalizes each word
+    - `trim`
+    - `trimprefix` if the string does not start with the specified prefix, the string is unchanged
+    - `trimspace` removes all whitespace
+    - `upper`
+- Collection functions
+    - `element` retrieves a single element from a list
+    - `flatten` takes a list and replaces any elements that are lists with a flattened sequence of the list's contents
+    - `index` finds the element index for a given value
+    - `keys` takes a map and returns a list containing the keys from that map
+    - `length`
+    - `alltrue`
+    - `anytrue`
+    - `chunklist` splits a list into a fixed size and returns a list of lists
+    - `coalesce` takes any numbers of arguments and returns the first one that isn't a null or empty string
+    - `coalescelist`
+    - `compact` takes a list of strings and returns a new list with any empty string elements removed
+    - `concat` takes two ore more lists and combines them into a single list
+    - `contains`
+    - `distinct` takes a list and returns a list with duplicate elements removed
+    - `lookup` retrieves the value of a single element from a map given its key. If the key does not exist, a default value is returned instead
+    - `matchkeys` constructs a new list by taking subset of elements from one list whose indexes match the corresponding indexes of values in another list
+    - `merge`
+    - `one` checks if a list has one or zero elements
+    - `range`
+    - `reverse`
+    - `setintersection` takes multiple sets and produces a single set containing only the elements that all sets contain
+    - `setproduct` produces a set of all the possible combinations
+    - `setsubtract` returns a set of values that are unique between multiple sets
+    - `setunion` returns a single set with all of the unique elements
+    - `slice`
+    - `sort`
+    - `sum`
+    - `transpose`
+    - `values` takes a map and returns the values of a map
+    - `zipmap` constructs a map from a list of keys and corresponding list of values
+- Encoding
+    - `base64encode`
+    - `jsonencode`
+    - `textencodebase65`
+    - `yamlencode`
+    - `base64gzip`
+    - `urlencode`
+- Decoding
+    - `base64decode`
+    - `csvdecode`
+    - `jsondecode`
+    - `textdecodebase64`
+    - `yamldecode`
+- Filesystem
+    - `abspath` takes a string and converts it into an absolute path
+    - `dirname`
+    - `pathexpand` takes the filesystem path and replaces it with the current user's home dir path
+    - `basename` returns the filename
+    - `file` reads the contents of a file
+    - `fileexists`
+    - `fileset` enumerates a set of regular file names given a path and pattern
+    - `filebase64` reads the contents of a file and returns a base64 encoded string
+    - `templatefile` reads the file at the given path and renders its content as a template using a supplied set of template variables
+        - This **must** be a relative path
+- Date and Time
+    - `formatdate`
+    - `timeadd`
+    - `timestamp`
+- Hash and Crypto
+    - `base64sha256`
+    - `base64sha512`
+    - `bcrypt`
+    - `filebase64sha256`
+    - `filebase64sha512`
+    - `filemd5`
+    - `filesha1`
+    - `filesha256`
+    - `filesha512`
+    - `md5`
+    - `rsadecrypt`
+    - `sha1`
+    - `sha256`
+    - `sha512`
+    - `uuid`
+    - `uuidv5`
+- IP network
+    - `cidrhost` calculates a full host ip address for a given host number with a given IP network address prefix
+    - `cidernetmask` converts an ipv4 address prefix that is given in cidr notation into a subnet mask address
+    - `cidrsubnet` calculates a subnet address within the given IP network address prefix
+    - `cidrsubnets` calculates a sequence of consecutive ip address ranges within a particular CIDR prefix
+- Type conversion
+    - `can` evaluates the given expression and returns a boolean value indicating whether the expression produced a result without erros
+    - `defaults` a specialized function intended for use with input variables whose type constraints are object types or collections of object types that include optional attributes
+    - `nonsensitive` takes a sensitive value and returns a copy of that value with the sensitive marking removed, thereby exposing the sensitive value
+    - `sensitive` takes any value and returns a copy of it marked so that Terraform will treat it as sensitive, with the same meaning and behavior as for sensitive input variables.
+    - `tobool` converts its argument to a boolean value
+    - `tomap` converts its argument to a map value
+    - `toset` converts its argument to a set value.
+    - `tolist` converts its argument to a list value
+    - `tonumber` converts its argument to a number value
+    - `tostring` converts its argument to a set value
+    - `try` evaluates all of its argument expressions in turn and returns the result of the first one that does not produce any errors
+### Terraform Cloud
+- Terraform cloud helps teams use terraform together, but is not necessary
+    - History of previous states and runs
+    - manage state files
+    - tagging
+    - variable injection
+    - run triggers
+    - global state sharing
+    - commenting on runs
+    - notifications on web hooks
+    - policy as code
+    - mfa
+    - SSO
+    - Cost estimation in Teams and Governance plans and above
+    - And more!
+- An `organization` is a collection of `workspaces`
+- `workspaces` are a unique environment or stack
+- `runs` are a single run of the terraform environment
+- You have to choose a workflow when you create a workspace
+    - API driven
+    - UI / VCS
+    - CLI-driven
+- `fixed permission sets` are pre-made permissions for quick permission assignments
+- A workspace admin is separate from an organization admin
+- `run environments` are a VM or container for the execution of code for a specific run. In other words, essentially a build server
+- There are agents to allow use of Terraform Cloud for on-prem things like Nutanix
+### Terraform Enterprise 
+- Terraform enterprise is the self hosted distro of the Terraform cloud / platform
+    - Requires linux, postgresql database, tls cert, and some form of cloud storage
+    - And of course, requires a license
+- The `operational mode` refers to how data is stored
+    - External services, such as s3 or postgresql
+    - Mounted disk
+    - Demo stores all data on the instance, and is not recommended for prod
+- You can set this up in an air gapped environment
+### Workspaces
+- there are two variants of workspaces
+    - CLI workspaces
+    - terraform cloud workspaces
+- Think of workspaces like having different branches in a git repo
+- By default, you have a local workspace called default that can never be deleted
+- when local, terraform stores the workspace state in a folder called `terraform.tfstate.d`
+- In a remote state, the workspace files are stored directly in the configured backend
+- you can reference the current workspace name via `terraform.workspace`
+- A terraform config has a backend that defines how operations are executed, and where persistent data is stored
+- `terraform workspace list` lists all existing workspaces
+- `terraform workspace show` shows the current workspace
+- `terraform workspace select` can be used to switch workspaces
+- `terraform workspace new` creates and switches to a new workspace
+- `terraform workspace delete` deletes the target workspace

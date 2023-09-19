@@ -1,4 +1,4 @@
-# learning_terraform
+# Terraform Exam Notes
 Initially following along with the FreeCodeCamp course and Terraform: Up and Running book, but supplementing from elsewhere as needed. Uploading to a public GitHub repo in the event that this may help anyone else.
 ### General notes
 - `terraform.tvfars` is where you assign values to variables, wheras `variables.tf` is where you declare your variables
